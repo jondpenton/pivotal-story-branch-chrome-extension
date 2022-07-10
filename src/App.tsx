@@ -1,45 +1,118 @@
-import { useState } from 'react'
-import logo from './logo.svg'
-import './App.css'
+import React from 'react'
 
-function App() {
-  const [count, setCount] = useState(0)
+type Article = {
+  id: string
+  title: string
+  url: string
+  positive_reactions_count: number
+  published_timestamp: string
+  reading_time_minutes: number
+}
+
+const useArticles = () => {
+  const [articles, setArticles] = React.useState<Article[]>([])
+  const [error, setError] = React.useState('')
+  const [isLoading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await fetch('https://dev.to/api/articles?top=1')
+
+        if (!response.ok) {
+          throw new Error('Response is not ok')
+        }
+
+        const data = await response.json()
+        setArticles(data)
+      } catch (error) {
+        setError('An error ocurred while fetching articles')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchArticles()
+  }, [])
+
+  return { articles, error, isLoading }
+}
+
+export default function App() {
+  const { articles, error, isLoading } = useArticles()
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>Hello Vite + React!</p>
-        <p>
-          <button type="button" onClick={() => setCount((count) => count + 1)}>
-            count is: {count}
-          </button>
-        </p>
-        <p>
-          Edit <code>App.tsx</code> and save to test HMR updates.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-          {' | '}
-          <a
-            className="App-link"
-            href="https://vitejs.dev/guide/features.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Vite Docs
-          </a>
-        </p>
-      </header>
+    <div className="container">
+      {isLoading ? (
+        <div className="spinner">
+          <span className="spinner__circle" />
+          <span>Please wait...</span>
+        </div>
+      ) : error ? (
+        <span className="error">{error}</span>
+      ) : (
+        <>
+          <h1 className="title">Top posts on DEV Community</h1>
+          <ul className="articles">
+            {articles.map(
+              ({
+                id,
+                title,
+                url,
+                positive_reactions_count,
+                published_timestamp,
+                reading_time_minutes,
+              }) => (
+                <li key={id} className="article">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="article__link"
+                  >
+                    {title}
+                  </a>
+                  <ul className="article__details">
+                    {[
+                      {
+                        title: 'Published at',
+                        icon: '🗓',
+                        label: 'Calendar emoji',
+                        value: new Date(
+                          published_timestamp
+                        ).toLocaleDateString(),
+                      },
+                      {
+                        title: 'Reading time',
+                        icon: '🕑',
+                        label: 'Clock emoji',
+                        value: `${reading_time_minutes} min`,
+                      },
+                      {
+                        title: 'Reactions count',
+                        icon: '❤️ 🦄 🔖',
+                        label: 'Heart, unicorn and bookmark emojis',
+                        value: positive_reactions_count,
+                      },
+                    ].map(({ title, icon, label, value }, index) => (
+                      <li
+                        key={`${id}-detail-${index}`}
+                        className="article__detail"
+                        title={title}
+                      >
+                        <span role="img" aria-label={label}>
+                          {icon}
+                        </span>
+                        <span>{value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              )
+            )}
+          </ul>
+        </>
+      )}
     </div>
   )
 }
-
-export default App
